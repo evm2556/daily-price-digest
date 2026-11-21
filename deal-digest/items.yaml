@@ -1,0 +1,27 @@
+# Stop collecting after this date (Cyber Monday is Nov 30, 2026).
+until: 2026-12-01
+
+# Reddit communities to search (joined with +).
+subreddits: deals+buildapcsales+GameDeals+frugalmalefashion
+
+items:
+  # name:    shown in the digest; also the search query unless `query` is set
+  # terms:   every word must appear in a deal title (defaults to the words of `name`)
+  # usual:   optional, normal price (read it off a Keepa/CamelCamelCamel/Google chart once)
+  # low_6m:  optional, lowest price in the last 6 months (same chart)
+  # target:  optional, price you'd happily pay
+  # google:  true -> also check Google Shopping (needs SERPAPI_KEY; free tier is small, use sparingly)
+  - name: Sony WH-1000XM5
+    terms: [sony, xm5]
+    usual: 399
+    low_6m: 278
+    target: 250
+    google: true
+
+  - name: Logitech MX Master 3S
+    terms: [mx master 3s]
+    usual: 99
+    low_6m: 70
+
+  - name: Samsung 990 Pro 2TB
+    terms: [990 pro, 2tb]
