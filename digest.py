@@ -180,7 +180,10 @@ def main():
         return
     results, errors = run(cfg, today)
     page = render(results, errors, today)
-    OUT.write_text(page, encoding="utf-8")
+    OUT.write_text(page, encoding="utf-8")  # always the latest
+    stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M")  # runner clock is UTC on GitHub
+    (ROOT / "digests").mkdir(exist_ok=True)
+    (ROOT / "digests" / f"digest-{stamp}.html").write_text(page, encoding="utf-8")
     n = sum(r["tag"] == "best" for r in results)
     send_email(page, f"Deal digest {today}: {n} at/under your benchmark")
     print(f"{len(results)} items, {n} strong hits, {len(errors)} source errors -> {OUT.name}")
