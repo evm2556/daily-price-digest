@@ -100,7 +100,7 @@ def run(cfg, today):
                 found += fn(q, cfg)
             except Exception as ex:  # one dead source must not kill the digest
                 errors.append(f"{fn.__name__} / {name}: {ex}")
-        found = [h for h in found if all(t in h["title"].lower() for t in terms)]
+        found = [h for h in found if all(any(a in h["title"].lower() for a in t.split("|")) for t in terms)]
         found.sort(key=lambda h: (h["price"] is None, h["price"] or 0))
 
         rows = con.execute("SELECT price, substr(seen_at,1,10) FROM observations "

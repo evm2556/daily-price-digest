@@ -1,27 +1,41 @@
-# Stop collecting after this date (Cyber Monday is Nov 30, 2026).
 until: 2026-12-01
+subreddits: deals+frugalmalefashion+boardgamedeals
 
-# Reddit communities to search (joined with +).
-subreddits: deals+buildapcsales+GameDeals+frugalmalefashion
-
+# terms: every entry must match; inside an entry, "a|b" means a OR b.
 items:
-  # name:    shown in the digest; also the search query unless `query` is set
-  # terms:   every word must appear in a deal title (defaults to the words of `name`)
-  # usual:   optional, normal price (read it off a Keepa/CamelCamelCamel/Google chart once)
-  # low_6m:  optional, lowest price in the last 6 months (same chart)
-  # target:  optional, price you'd happily pay
-  # google:  true -> also check Google Shopping (needs SERPAPI_KEY; free tier is small, use sparingly)
-  - name: Sony WH-1000XM5
-    terms: [sony, xm5]
-    usual: 399
-    low_6m: 278
-    target: 250
-    google: true
-
-  - name: Logitech MX Master 3S
-    terms: [mx master 3s]
-    usual: 99
-    low_6m: 70
-
-  - name: Samsung 990 Pro 2TB
-    terms: [990 pro, 2tb]
+  - name: Robot vacuum
+    query: robot vacuum
+    terms: ["vacuum|robovac", "robot|robo|roomba|roborock"]
+  - name: Kids bath towels
+    query: bath towels
+    terms: ["towel"]
+  - name: Living room bass speaker
+    query: subwoofer
+    terms: ["subwoofer|bass"]
+  - name: Board games
+    query: board game
+    terms: ["board game|catan|ticket to ride|azul|wingspan|carcassonne"]
+  - name: Basement washcloths
+    query: washcloths
+    terms: ["washcloth|wash cloth"]
+  - name: Travel Magna-Tiles
+    query: magna-tiles
+    terms: ["magna"]
+  - name: Kids loofah (x2)
+    query: kids loofah
+    terms: ["loofah|luffa|loofa|luffah"]
+  - name: Men's Michael Kors jacket
+    query: michael kors jacket men
+    terms: ["michael kors", "jacket|coat|parka"]
+  - name: Satin pillowcase
+    query: satin pillowcase
+    terms: ["satin", "pillowcase|pillow case"]
+  - name: Kids camera
+    query: kids camera
+    terms: ["camera", "kid|children"]
+  - name: Cordless snow blower
+    query: cordless snow blower
+    terms: ["snow blower|snowblower|snow thrower"]
+  - name: Chapstick
+    query: chapstick
+    terms: ["chapstick|lip balm"]
