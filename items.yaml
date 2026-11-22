@@ -5,19 +5,24 @@ llm: true
 llm_model: openai/gpt-4.1       # run `gh models list` to see what's available
 
 items:
-  - name: Roborock robot vacuum
-    query: roborock robot vacuum
-    description: Roborock robot vacuum, any model, under $500. Not accessories, filters or replacement parts.
+  - name: Roborock Qrevo S Pro
+    query: roborock qrevo
+    description: Roborock Qrevo S Pro robot vacuum and mop, under $500. Not accessories, filters or replacement parts.
     target: 500
 
   - name: Kids bath towels
     description: basic bath towels for kids, plain and simple
 
-  - name: Living room bass speaker
-    description: subwoofer or bass-heavy speaker for a living room
+  - name: Complex euro board games
+    description: complex, heavier euro-style strategy board games, full base games (not accessories, sleeves or expansions only)
 
-  - name: Board games
-    description: board games, full base games (not accessories, sleeves or expansions only)
+  - name: 88-key weighted keyboard
+    query: 88 key weighted keyboard
+    description: 88-key weighted-action digital piano or keyboard for a kid beginner, full-size weighted keys (not 61-key, not a toy)
+
+  - name: Queen's Dilemma board game
+    query: queens dilemma board game
+    description: The Queen's Dilemma board game
 
   - name: Basement washcloths
     description: basic cotton washcloths, multi-packs are fine
@@ -29,7 +34,7 @@ items:
     description: kids loofah, luffa or bath sponge, need two
 
   - name: Men's Michael Kors jacket
-    description: men's Michael Kors jacket, basic but cool, like a North Face style
+    description: men's Michael Kors jacket, basic but cool, like a North Face style, warm and not too thin
 
   - name: Satin pillowcase
     description: satin pillowcase
@@ -37,9 +42,12 @@ items:
   - name: Kids camera
     description: kids digital camera
 
-  - name: Cordless snow blower
-    # TODO: add your leaf blower's battery brand to the description (e.g. "EGO platform")
-    description: cordless battery-powered snow blower
+  - name: Greenworks snow blower
+    # TODO: add the battery voltage of your leaf blower (e.g. 24V, 40V, 60V, 80V) to the description
+    description: Greenworks cordless snow blower that uses the same Greenworks battery platform as my Greenworks leaf blower
 
   - name: Chapstick
     description: Chapstick or lip balm, multi-packs are fine
+
+  - name: Kids lava lamp
+    description: kids lava lamp
