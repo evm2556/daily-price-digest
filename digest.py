@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
 """Daily deal digest: Slickdeals + Reddit (+ optional Google Shopping) judged against your price history.
+An LLM (GitHub Models) expands vague wishes into searches/subreddits and rejects bad matches.
 
 Run locally:  python digest.py --open        (writes digest.html)
 Scheduled:    .github/workflows/daily.yml
 """
-import argparse, datetime as dt, html, os, re, smtplib, sqlite3, statistics, urllib.parse, webbrowser
+import argparse, datetime as dt, hashlib, html, json, os, re, shutil, smtplib, sqlite3, statistics
+import subprocess, time, urllib.parse, webbrowser
 from email.mime.text import MIMEText
 from pathlib import Path
 
 import feedparser, requests, yaml
 
 ROOT = Path(__file__).parent
-DB, OUT = ROOT / "prices.db", ROOT / "digest.html"
+DB, OUT, CACHE = ROOT / "prices.db", ROOT / "digest.html", ROOT / "expansions.json"
 UA = "deal-digest/1.0 (personal use)"
 WINDOW_DAYS = 180
 PRICE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?")
+SUBREDDIT = re.compile(r"^[A-Za-z0-9_]{3,21}$")
+DEFAULT_MODEL = "openai/gpt-4.1"
 
 
 # ---------- collectors: each returns [{source, title, url, price}] ----------
 def scrub(text):
     """Keys end up in request URLs and therefore in error messages; never write them to the digest."""
-    for var in ("REDDIT_RSS_KEY", "SERPAPI_KEY"):
+    for var in ("REDDIT_RSS_KEY", "SERPAPI_KEY", "GITHUB_TOKEN", "GH_TOKEN"):
         if os.getenv(var):
             text = text.replace(os.getenv(var), "***")
     return text
@@ -67,6 +71,76 @@ def google(q, cfg):
             for s in r.json().get("shopping_results", [])[:10]]
 
 
+# ---------- LLM (GitHub Models) ----------
+def llm_available():
+    return bool(shutil.which("gh") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"))
+
+
+def llm(instruction, data, model):
+    """`gh models run MODEL "instruction"` with data on stdin; falls back to the REST API."""
+    time.sleep(1)  # be gentle with per-minute rate limits
+    cli_err = "gh not installed"
+    if shutil.which("gh"):
+        p = subprocess.run(["gh", "models", "run", model, instruction], input=data,
+                           capture_output=True, text=True, timeout=120)
+        if p.returncode == 0 and p.stdout.strip():
+            return p.stdout
+        cli_err = (p.stderr or p.stdout).strip()[:200]
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if not token:
+        raise RuntimeError(f"gh models failed ({cli_err}) and no token for REST fallback")
+    r = requests.post("https://models.github.ai/inference/chat/completions", timeout=120,
+                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                      json={"model": model, "messages": [{"role": "user", "content": f"{instruction}\n\n{data}"}]})
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+def llm_json(instruction, data, model):
+    out = llm(instruction + " Reply with a single JSON object and nothing else.", data, model)
+    return json.loads(out[out.index("{"): out.rindex("}") + 1])  # tolerate ```json fences / chatter
+
+
+def uniq(xs):
+    return list({x.lower(): x for x in xs if x}.values())
+
+
+def plan(item, cfg, cache, model):
+    """Search queries + subreddits for an item. A free-text `description` is expanded by the LLM once
+    and cached in expansions.json (edit that file to correct it)."""
+    queries = [item.get("query", item["name"])]
+    subs = [s for s in cfg.get("subreddits", "deals").split("+") if s]
+    desc = item.get("description")
+    if desc:
+        key = hashlib.sha1(desc.encode()).hexdigest()[:10]
+        ent = cache.get(item["name"])
+        if not ent or ent.get("hash") != key:
+            j = llm_json('A shopper described something they want to buy (text below). Return {"queries": '
+                         '[up to 2 short search queries for deal sites], "subreddits": [up to 4 subreddit '
+                         'names without r/ where deals for this kind of product are posted]}.', desc, model)
+            clean = lambda s: s.strip().removeprefix("r/") if isinstance(s, str) else ""
+            ent = {"hash": key,
+                   "queries": [q.strip() for q in j.get("queries", []) if isinstance(q, str) and q.strip()][:2],
+                   "subreddits": [s for s in map(clean, j.get("subreddits", [])) if SUBREDDIT.match(s)][:4]}
+            cache[item["name"]] = ent
+        queries += ent["queries"]
+        subs += ent["subreddits"]
+    return uniq(queries), uniq(subs)
+
+
+def verify(item, hits, model):
+    """Ask the LLM which listings are really what the shopper wants. Returns (kept, rejected_count)."""
+    lines = "\n".join(f'{i}. [{h["source"]}] {h["title"]} | {money(h["price"]) if h["price"] else "no price"}'
+                      for i, h in enumerate(hits))
+    want = item.get("description") or item["name"]
+    j = llm_json(f'A shopper wants: "{want}". The numbered deal listings below came from search. Return '
+                 '{"keep": [indexes]} containing only listings that are genuinely that kind of product: '
+                 'right category, not an accessory, part, refill or different item, and a plausible '
+                 'new-item deal.', lines, model)
+    keep = {i for i in j.get("keep", []) if isinstance(i, int) and 0 <= i < len(hits)}
+    return [h for i, h in enumerate(hits) if i in keep], len(hits) - len(keep)
+
+
 # ---------- scoring ----------
 def verdict(item, price, hist, days):
     """Return (tag, [phrases]) comparing price to usual price, 6-month low, and tracked history."""
@@ -103,19 +177,46 @@ def run(cfg, today):
         UNIQUE(item, url, price))""")
     cutoff = (today - dt.timedelta(days=WINDOW_DAYS)).isoformat()
     results, errors = [], []
+    model = cfg.get("llm_model", DEFAULT_MODEL)
+    use_llm = bool(cfg.get("llm", True))
+    if use_llm and not llm_available():
+        use_llm = False
+        errors.append("LLM skipped: neither the gh CLI nor GITHUB_TOKEN/GH_TOKEN is available")
+    cache = json.loads(CACHE.read_text(encoding="utf-8")) if CACHE.exists() else {}
+    before = json.dumps(cache, sort_keys=True)
+
     for item in cfg["items"]:
         name = item["name"]
-        terms = [t.lower() for t in (item.get("terms") or name.split())]
-        q = item.get("query", name)
+        if item.get("terms"):
+            terms = [t.lower() for t in item["terms"]]
+        else:  # with the LLM judging matches, don't pre-filter on the name's words
+            terms = [] if use_llm else [w.lower() for w in name.split()]
+        queries, icfg = [item.get("query", name)], cfg
+        if use_llm:
+            try:
+                queries, subs = plan(item, cfg, cache, model)
+                icfg = {**cfg, "subreddits": "+".join(subs)}
+            except Exception as ex:
+                errors.append(scrub(f"llm expand / {name}: {ex}"))
         collectors = [slickdeals, reddit] + ([google] if item.get("google") else [])
         found = []
-        for fn in collectors:
-            try:
-                found += fn(q, cfg)
-            except Exception as ex:  # one dead source must not kill the digest
-                errors.append(scrub(f"{fn.__name__} / {name}: {ex}"))
+        for q in queries:
+            for fn in collectors:
+                try:
+                    found += fn(q, icfg)
+                except Exception as ex:  # one dead source must not kill the digest
+                    errors.append(scrub(f"{fn.__name__} / {name} / '{q}': {ex}"))
+        seen = set()
+        found = [h for h in found if not (h["url"] in seen or seen.add(h["url"]))]
         found = [h for h in found if all(any(a in h["title"].lower() for a in t.split("|")) for t in terms)]
         found.sort(key=lambda h: (h["price"] is None, h["price"] or 0))
+
+        rejected = 0
+        if use_llm and found:
+            try:
+                found, rejected = verify(item, found[:20], model)
+            except Exception as ex:  # fail open: keep everything rather than hide deals
+                errors.append(scrub(f"llm verify / {name}: {ex}"))
 
         rows = con.execute("SELECT price, substr(seen_at,1,10) FROM observations "
                            "WHERE item=? AND substr(seen_at,1,10)>=? AND substr(seen_at,1,10)<?",
@@ -129,9 +230,11 @@ def run(cfg, today):
         best = next((h for h in found if h["price"] is not None), None)
         tag, parts = verdict(item, best["price"], hist, days) if best else ("none", [])
         results.append({"name": name, "best": best, "others": [h for h in found if h is not best],
-                        "tag": tag, "parts": parts, "days": days})
+                        "tag": tag, "parts": parts, "days": days, "rejected": rejected})
     con.commit()
     con.close()
+    if json.dumps(cache, sort_keys=True) != before:
+        CACHE.write_text(json.dumps(cache, indent=2, sort_keys=True), encoding="utf-8")
     return results, errors
 
 
@@ -158,10 +261,11 @@ def render(results, errors, today):
         b = r["best"]
         others = "".join(f"<li>{link(o)} {money(o['price']) if o['price'] else '(no price)'} "
                          f"<span class=mut>{e(o['title'][:90])}</span></li>" for o in r["others"][:4])
+        rej = f" &middot; {r['rejected']} rejected by LLM" if r.get("rejected") else ""
         out.append(f'<div class="card {r["tag"]}"><b>{e(r["name"])}</b>'
                    f'<div class=price>{money(b["price"])} <span class=mut>via {link(b)}</span></div>'
                    f'<div>{e("; ".join(r["parts"]))}</div>'
-                   f'<div class=mut>{e(b["title"][:120])} &middot; {r["days"]} days of tracked history</div>'
+                   f'<div class=mut>{e(b["title"][:120])} &middot; {r["days"]} days of tracked history{rej}</div>'
                    f'{"<ul>" + others + "</ul>" if others else ""}</div>')
     quiet = [r["name"] for r in results if not r["best"]]
     if quiet:
