@@ -1,41 +1,45 @@
 until: 2026-12-01
 subreddits: deals+frugalmalefashion+boardgamedeals
 
-# terms: every entry must match; inside an entry, "a|b" means a OR b.
+llm: true
+llm_model: openai/gpt-4.1       # run `gh models list` to see what's available
+
 items:
-  - name: Robot vacuum
-    query: robot vacuum
-    terms: ["vacuum|robovac", "robot|robo|roomba|roborock"]
+  - name: Roborock robot vacuum
+    query: roborock robot vacuum
+    description: Roborock robot vacuum, any model, under $500. Not accessories, filters or replacement parts.
+    target: 500
+
   - name: Kids bath towels
-    query: bath towels
-    terms: ["towel"]
+    description: basic bath towels for kids, plain and simple
+
   - name: Living room bass speaker
-    query: subwoofer
-    terms: ["subwoofer|bass"]
+    description: subwoofer or bass-heavy speaker for a living room
+
   - name: Board games
-    query: board game
-    terms: ["board game|catan|ticket to ride|azul|wingspan|carcassonne"]
+    description: board games, full base games (not accessories, sleeves or expansions only)
+
   - name: Basement washcloths
-    query: washcloths
-    terms: ["washcloth|wash cloth"]
+    description: basic cotton washcloths, multi-packs are fine
+
   - name: Travel Magna-Tiles
-    query: magna-tiles
-    terms: ["magna"]
+    description: travel-size Magna-Tiles or similar magnetic tile sets
+
   - name: Kids loofah (x2)
-    query: kids loofah
-    terms: ["loofah|luffa|loofa|luffah"]
+    description: kids loofah, luffa or bath sponge, need two
+
   - name: Men's Michael Kors jacket
-    query: michael kors jacket men
-    terms: ["michael kors", "jacket|coat|parka"]
+    description: men's Michael Kors jacket, basic but cool, like a North Face style
+
   - name: Satin pillowcase
-    query: satin pillowcase
-    terms: ["satin", "pillowcase|pillow case"]
+    description: satin pillowcase
+
   - name: Kids camera
-    query: kids camera
-    terms: ["camera", "kid|children"]
+    description: kids digital camera
+
   - name: Cordless snow blower
-    query: cordless snow blower
-    terms: ["snow blower|snowblower|snow thrower"]
+    # TODO: add your leaf blower's battery brand to the description (e.g. "EGO platform")
+    description: cordless battery-powered snow blower
+
   - name: Chapstick
-    query: chapstick
-    terms: ["chapstick|lip balm"]
+    description: Chapstick or lip balm, multi-packs are fine
