@@ -44,7 +44,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with the single word: ok"}]}'
           echo "-- headers"; cat /tmp/h.txt; echo "-- body"; head -c 600 /tmp/b.txt        
-          env:
+        env:
           GH_TOKEN: ${{ github.token }}
       - run: python digest.py
         env:
