@@ -5,9 +5,9 @@ llm: true
 llm_model: openai/gpt-4.1       # run `gh models list` to see what's available
 
 items:
-  - name: Roborock Qrevo S Pro
+  - name: Roborock Qrevo S Pro or Master
     query: roborock qrevo
-    description: Roborock Qrevo S Pro robot vacuum and mop, under $500. Not accessories, filters or replacement parts.
+    description: Roborock Qrevo S Pro or Roborock Qrevo Master robot vacuum and mop, under $500. Not accessories, filters or replacement parts.
     target: 500
 
   - name: Kids bath towels
@@ -37,17 +37,20 @@ items:
     description: men's Michael Kors jacket, basic but cool, like a North Face style, warm and not too thin
 
   - name: Satin pillowcase
-    description: satin pillowcase
+    description: satin pillowcase for a girl
 
   - name: Kids camera
     description: kids digital camera
 
-  - name: Greenworks snow blower
-    # TODO: add the battery voltage of your leaf blower (e.g. 24V, 40V, 60V, 80V) to the description
-    description: Greenworks cordless snow blower that uses the same Greenworks battery platform as my Greenworks leaf blower
+  - name: Greenworks snow blower 2601402
+    query: greenworks 2601402 snow blower
+    description: Greenworks snow blower, model 2601402
 
   - name: Chapstick
     description: Chapstick or lip balm, multi-packs are fine
 
   - name: Kids lava lamp
     description: kids lava lamp
+
+  - name: Living room bass speaker
+    description: subwoofer or bass-heavy speaker for a living room

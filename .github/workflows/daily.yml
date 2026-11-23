@@ -2,7 +2,15 @@ name: daily-deal-digest
 on:
   schedule:
     - cron: "0 13 * * *"   # 13:00 UTC = 8am US Eastern (9am during DST)
+  push:
+    branches: [main]
+    paths:
+      - items.yaml
+      - wishlist.txt
   workflow_dispatch:        # "Run workflow" button
+concurrency:
+  group: digest
+  cancel-in-progress: false  # queue runs instead of overlapping them
 permissions:
   contents: write
   models: read              # lets the built-in token call GitHub Models
@@ -27,6 +35,7 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           REDDIT_RSS_KEY: ${{ secrets.REDDIT_RSS_KEY }}
+          WISHLIST_URL: ${{ secrets.WISHLIST_URL }}
       - uses: actions/upload-artifact@v4
         with: { name: digest, path: digest.html }
       - name: Save history
@@ -37,4 +46,5 @@ jobs:
           git add -A
           git status --short
           git commit -m "digest $(date -u +%F)" || echo "nothing to commit"
+          git pull --rebase
           git push
