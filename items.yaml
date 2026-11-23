@@ -42,9 +42,9 @@ items:
   - name: Kids camera
     description: kids digital camera
 
-  - name: Greenworks snow blower 2601402
-    query: greenworks 2601402 snow blower
-    description: Greenworks snow blower, model 2601402
+  - name: Greenworks snow shovel 2617802
+    query: greenworks 2617802 snow shovel
+    description: Greenworks snow shovel, model 2617802
 
   - name: Chapstick
     description: Chapstick or lip balm, multi-packs are fine
