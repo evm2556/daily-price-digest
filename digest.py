@@ -75,7 +75,6 @@ def google(q, cfg):
 def llm_available():
     return bool(shutil.which("gh") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"))
 
-
 def llm(instruction, data, model):
     """`gh models run MODEL "instruction"` with data on stdin; falls back to the REST API."""
     time.sleep(1)  # be gentle with per-minute rate limits
@@ -85,21 +84,26 @@ def llm(instruction, data, model):
                            capture_output=True, text=True, timeout=120)
         if p.returncode == 0 and p.stdout.strip():
             return p.stdout
-        cli_err = (p.stderr or p.stdout).strip()[:200]
+        cli_err = f"exit {p.returncode}: {(p.stderr or p.stdout).strip()[:200]!r}"
     token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
     if not token:
         raise RuntimeError(f"gh models failed ({cli_err}) and no token for REST fallback")
     r = requests.post("https://models.github.ai/inference/chat/completions", timeout=120,
                       headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                       json={"model": model, "messages": [{"role": "user", "content": f"{instruction}\n\n{data}"}]})
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    try:
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"]
+    except Exception:
+        raise RuntimeError(f"CLI: {cli_err} | REST {r.status_code}: {r.text[:200]!r}") from None
 
 
 def llm_json(instruction, data, model):
     out = llm(instruction + " Reply with a single JSON object and nothing else.", data, model)
-    return json.loads(out[out.index("{"): out.rindex("}") + 1])  # tolerate ```json fences / chatter
-
+    try:
+        return json.loads(out[out.index("{"): out.rindex("}") + 1])  # tolerate ```json fences / chatter
+    except ValueError:
+        raise ValueError(f"model reply was not JSON: {out[:200]!r}") from None
 
 def uniq(xs):
     return list({x.lower(): x for x in xs if x}.values())

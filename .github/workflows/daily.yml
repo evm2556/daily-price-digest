@@ -26,6 +26,22 @@ jobs:
         run: gh extension install github/gh-models || echo "gh-models install failed; REST fallback will be used"
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Debug GitHub Models
+        continue-on-error: true
+        run: |
+          set +e
+          echo "== extensions"; gh extension list
+          echo "== models list"; gh models list | head -20
+          echo "== A: CLI, prompt only"
+          gh models run openai/gpt-4.1 "Reply with the single word: ok"; echo "exit: $?"
+          echo "== B: CLI, prompt plus stdin"
+          echo "some text" | gh models run openai/gpt-4.1 "Reply with the single word: ok"; echo "exit: $?"
+          echo "== C: REST"
+          curl -sS -i https://models.github.ai/inference/chat/completions \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
+            -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with the single word: ok"}]}' | head -30
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: python digest.py
         env:
           GH_TOKEN: ${{ github.token }}
