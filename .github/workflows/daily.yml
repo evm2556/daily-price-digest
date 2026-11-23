@@ -36,11 +36,15 @@ jobs:
           gh models run openai/gpt-4.1 "Reply with the single word: ok"; echo "exit: $?"
           echo "== B: CLI, prompt plus stdin"
           echo "some text" | gh models run openai/gpt-4.1 "Reply with the single word: ok"; echo "exit: $?"
-          echo "== C: REST"
-          curl -sS -i https://models.github.ai/inference/chat/completions \
-            -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
-            -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with the single word: ok"}]}' | head -30
-        env:
+          echo "== C: REST (headers + body)"
+          curl -sS -D /tmp/h.txt -o /tmp/b.txt https://models.github.ai/inference/chat/completions \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"openai/gpt-4.1","messages":[{"role":"user","content":"Reply with the single word: ok"}]}'
+          echo "-- headers"; cat /tmp/h.txt; echo "-- body"; head -c 600 /tmp/b.txt        
+          env:
           GH_TOKEN: ${{ github.token }}
       - run: python digest.py
         env:
